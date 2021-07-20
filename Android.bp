@@ -423,6 +423,12 @@ cc_library {
 
     shared_libs: ["liblzma"],
 
+    product_variables: {
+        eng: {
+            cflags: ["-DENHANCE_FOR_INVALID_ADDR_READ"],
+        },
+    },
+
     debug: {
         //shared_libs: ["liblog"],
     },

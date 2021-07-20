@@ -196,6 +196,20 @@ get_static_proc_name (unw_addr_space_t as, unw_word_t ip,
   return _Uelf64_get_proc_name (as, getpid (), ip, buf, buf_len, offp, arg);
 }
 
+#ifdef ENHANCE_FOR_INVALID_ADDR_READ
+static __attribute__((noinline))
+unw_word_t try_read_val(void *addr) {
+	unw_word_t val = 0xdeadaee0;
+	asm volatile ("ldr     %0, [%1, #0]\n"
+			"b       1f\n"
+			".long   0x75666475\n"
+			".long   0x00006477\n"
+			"1:\n"
+			:"+r"(val):"r"(addr):"memory");
+	return val;
+}
+#endif
+
 static int
 access_mem_unrestricted (unw_addr_space_t as, unw_word_t addr, unw_word_t *val,
                          int write, void *arg)
@@ -203,7 +217,15 @@ access_mem_unrestricted (unw_addr_space_t as, unw_word_t addr, unw_word_t *val,
   if (write)
     return -1;
 
+#ifdef ENHANCE_FOR_INVALID_ADDR_READ
+  unw_word_t out = try_read_val((void *)addr);
+  if (out == 0xdeadaee0)
+    return -1;
+  else
+    *val = out;
+#else
   *val = *(unw_word_t *) addr;
+#endif
   Debug (16, "mem[%lx] -> %lx\n", addr, *val);
   return 0;
 }
